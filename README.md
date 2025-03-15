@@ -43,5 +43,17 @@ Após a execução, o script remove os arquivos temporários de download e os ar
 ### 9. **Criptografia**
 O projeto utiliza um ambiente virtual **.venv** para isolar as dependências do projeto, garantindo um ambiente de desenvolvimento mais seguro e eficiente. Isso impede conflitos com outras bibliotecas e facilita a instalação das dependências de forma controlada.
 
+## Conclusão
+
+Este projeto proporciona uma solução automatizada para coletar, processar e organizar relatórios de vendas do portal **TakeEat**. Com a utilização de bibliotecas como Selenium, Pandas e Openpyxl, conseguimos criar um fluxo eficiente e seguro para automatizar tarefas repetitivas, economizando tempo e reduzindo erros manuais.
+
+Através da configuração simples do arquivo `.env`, o script garante que o processo seja personalizado de acordo com suas credenciais e preferências. Além disso, a organização dos relatórios finais e a remoção de arquivos temporários ajudam a manter o ambiente limpo e funcional.
+
+Com essa automação, as empresas podem melhorar a produtividade, concentrando-se em tarefas mais estratégicas enquanto o processo de coleta e organização de dados é realizado de forma eficiente e confiável.
+
+Sinta-se à vontade para adaptar, melhorar ou expandir o script conforme suas necessidades!
+
+
+
 
 
