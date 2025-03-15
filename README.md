@@ -1,6 +1,6 @@
 # Automação de Relatório de Vendas - Projeto No Jardim
 
-Este repositório contém um script de automação desenvolvido para facilitar a coleta, processamento e organização dos relatórios de vendas mensais do restaurante **No Jardim**. A solução utiliza o **Selenium** para a navegação automatizada no portal web da plataforma **Takeat**, juntamente com o **Pandas** para processamento e manipulação de dados em arquivos **CSV/Excel**. O objetivo principal é gerar relatórios de vendas de forma automatizada, combinando dados de diferentes fontes e organizando-os de acordo com o mês de venda.
+Este repositório contém um script de automação desenvolvido para facilitar a coleta, processamento e organização dos relatórios de vendas mensais do restaurante **No Jardim**. A solução utiliza o **Selenium** para a navegação automatizada no portal web da plataforma **Takeat**, juntamente com o **Pandas** para processamento e manipulação de dados em arquivos **Excel**. O objetivo principal é gerar relatórios de vendas de forma automatizada, combinando dados de diferentes fontes e organizando-os de acordo com o mês de venda.
 
 ## Tecnologias Utilizadas
 
