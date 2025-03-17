@@ -1,5 +1,6 @@
 import os
 import time
+import calendar
 import pandas as pd
 from dotenv import load_dotenv
 from openpyxl import load_workbook
@@ -20,11 +21,15 @@ ultimo_dia_mes = (primeiro_dia_mes.replace(month=hoje.month % 12 + 1, day=1) - t
 email = os.getenv("emailtakeat")
 password = os.getenv("senhatakeat")
 
+data_ontem = (datetime.now() - timedelta(1)).strftime('%d')
 data = datetime.now()
 mes_atual = f"{data.month:02}"
-print(mes_atual)
-planilha = fr"C:\Users\sigab\Downloads\Produtos(01-{mes_atual}_31-{mes_atual}).xlsx"
-caminho = f'C:\\Users\\sigab\\OneDrive - Siga Financeiro e Controladoria\\AUTOMACAO\\produtos.xlsx'
+mes_atual_int = datetime.now().month
+ano_atual = datetime.now().year
+ultimo_dia = calendar.monthrange(ano_atual, mes_atual_int)[1]
+
+planilha = fr"C:\Users\sigab\Downloads\Produtos({data_ontem}-{mes_atual}_{ultimo_dia}-{mes_atual}).xlsx"
+caminho = f'C:\\Users\\sigab\\OneDrive - Siga Financeiro e Controladoria\\AUTOMACAO\\Nojardim\\produtos.xlsx'
 
 def configurar_driver():
     edge_options = webdriver.EdgeOptions()
@@ -43,7 +48,6 @@ def configurar_driver():
 def realizar_login(driver):
     driver.get("https://gestor.takeat.app/login")
     
-    # Aguarda o campo de e-mail estar presente
     WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, '//input[@placeholder="E-mail"]')))
     email_field = driver.find_element(By.XPATH, '//input[@placeholder="E-mail"]')
     email_field.send_keys(email)
@@ -54,6 +58,8 @@ def realizar_login(driver):
     button_acesso = driver.find_element(By.XPATH, '//button[@type="button"]//span[text()="Acessar"]')
     button_acesso.click()
 
+def selecionar_relatorio(driver):
+
     wait = WebDriverWait(driver, 20)
     relatorio_link = wait.until(EC.element_to_be_clickable((By.XPATH, "//a[span[text()='Relatórios']]")))
     relatorio_link.click()
@@ -62,11 +68,55 @@ def realizar_login(driver):
     elemento = wait.until(EC.visibility_of_element_located((By.XPATH, "//*[contains(text(), 'Vendidos')]")))
     elemento.click()
 
-    time.sleep(60)
+def verificar_fim_de_semana(data):
+    data_obj = datetime.strptime(data, "%d-%m-%Y")
+    print(f"Data fornecida: {data}, Data convertida: {data_obj}")
 
-    wait = WebDriverWait(driver, 20)
-    botao_baixar = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[span[text()='Baixar']]")))
-    botao_baixar.click()
+    data_anterior = (data_obj - timedelta(days=1)).strftime("%d")
+    print(f"Data anterior: {data_anterior}")
+    
+    if data_obj.weekday() == 0: 
+        sexta = (data_obj - timedelta(days=3)).strftime("%d")
+        sabado = (data_obj - timedelta(days=2)).strftime("%d")
+        print(f"Segunda-feira detectada, retornando sexta e sábado: {sexta}, {sabado}")
+        return [sexta, sabado, data_anterior]
+    else:
+        return [data_anterior]
+
+def gerar_relatorio(driver, data):
+    
+        wait = WebDriverWait(driver, 30) 
+        elementos = wait.until(EC.presence_of_all_elements_located((By.CLASS_NAME, "sc-jQAyio")))
+        elementos[0].click()
+
+        dates = wait.until(EC.presence_of_all_elements_located((By.CLASS_NAME, "sc-GvgMv")))
+        date = next((el for el in dates if el.text == data), None)
+        if date:
+            date.click()
+
+        wait.until(EC.element_to_be_clickable((By.CLASS_NAME, "sc-jQAyio")))
+        elementos[0].click()
+
+        wait.until(EC.element_to_be_clickable((By.CLASS_NAME, "sc-jQAyio")))
+        elementos[1].click()
+
+        dates = wait.until(EC.presence_of_all_elements_located((By.CLASS_NAME, "sc-GvgMv")))
+        date = next((el for el in dates if el.text == data), None)
+        if date:
+            date.click()
+
+        wait.until(EC.element_to_be_clickable((By.CLASS_NAME, "sc-jQAyio")))
+        elementos[1].click()
+
+        baixar = wait.until(EC.element_to_be_clickable((By.CLASS_NAME, "sc-fujznN")))
+        baixar.click()
+
+        wait.until(EC.element_to_be_clickable((By.CLASS_NAME, "sc-jQAyio")))
+        elementos[1].click()
+
+        baixar = wait.until(EC.element_to_be_clickable((By.CLASS_NAME, "sc-fujznN")))
+        baixar.click()
+        time.sleep(10)
 
 def tratar_planilha(planilha, data):
 
@@ -78,7 +128,7 @@ def tratar_planilha(planilha, data):
     df.insert(1,"Tipo","")
     df.insert(len(df.columns), "PIZZA de Dois Sabores", "")
 
-    arquivo_saida = r"C:\Users\sigab\Downloads\meu_arquivo.xlsx"
+    arquivo_saida = planilha
     df.to_excel(arquivo_saida, index=False, engine='openpyxl')
 
 def concatenar_planilhas(arquivo_saida, caminho):
@@ -146,12 +196,16 @@ def deletar_arquivo(planilha, arquivo_saida):
 
 
 driver = configurar_driver()
-configurar_driver()
 realizar_login(driver)
-tratar_planilha(planilha, data)
-concatenar_planilhas(arquivo_saida, caminho)
-gerar_arquivo(df_concatenado)
-deletar_arquivo(planilha, arquivo_saida)
+selecionar_relatorio(driver)
+datas_para_processar = verificar_fim_de_semana(data)
+for datas in datas_para_processar:
+    print(f"Iniciando o processamento para a data: {data}")
+    gerar_relatorio(driver, datas)
+    tratar_planilha(planilha, data)
+    concatenar_planilhas(arquivo_saida, caminho)
+    gerar_arquivo(df_concatenado)
+    deletar_arquivo(planilha, arquivo_saida)
 
 print("Processo concluído.")
 driver.quit()
