@@ -22,6 +22,9 @@ O script configura o **Microsoft Edge** com preferências de download, garantind
 ### 2. **Login Automático**
 O script realiza o login automaticamente no portal **TakeEat** utilizando as credenciais armazenadas em um arquivo `.env`.
 
+### 6. **Verificação de Fim de Semana**
+Antes de selecionar o relatório de vendas, o script verifica se a data de coleta cai em um fim de semana (sábado ou domingo). Caso seja necessário, ele ajusta automaticamente a data para o dia útil anterior, garantindo que o relatório seja sempre gerado com base em uma data válida de vendas.
+
 ### 3. **Geração e Download do Relatório**
 Após o login, o script navega até a seção de relatórios de vendas, seleciona o relatório do dia anterior e realiza o download do arquivo em **Excel**.
 
