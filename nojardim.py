@@ -1,6 +1,5 @@
 import os
 import time
-import calendar
 import pandas as pd
 from dotenv import load_dotenv
 from openpyxl import load_workbook
@@ -14,22 +13,19 @@ from webdriver_manager.microsoft import EdgeChromiumDriverManager
 
 load_dotenv("cripto.env")
 
-hoje = datetime.today()
-primeiro_dia_mes = hoje.replace(day=1)
-ultimo_dia_mes = (primeiro_dia_mes.replace(month=hoje.month % 12 + 1, day=1) - timedelta(days=1))
-
 email = os.getenv("emailtakeat")
 password = os.getenv("senhatakeat")
 
-data_ontem = (datetime.now() - timedelta(1)).strftime('%d')
+hoje = datetime.today()
+data_atual = hoje.strftime("%d-%m-%Y")
 data = datetime.now()
+
 mes_atual = f"{data.month:02}"
 mes_atual_int = datetime.now().month
-ano_atual = datetime.now().year
-ultimo_dia = calendar.monthrange(ano_atual, mes_atual_int)[1]
 
-planilha = fr"C:\Users\sigab\Downloads\Produtos({data_ontem}-{mes_atual}_{ultimo_dia}-{mes_atual}).xlsx"
-caminho = f'C:\\Users\\sigab\\OneDrive - Siga Financeiro e Controladoria\\AUTOMACAO\\Nojardim\\produtos.xlsx'
+ano_atual = datetime.now().year
+
+caminho = f'G:\\.shortcut-targets-by-id\\1ySpnxdv_XzDx42T-TJ1JYAs013TNGwLO\\SigaBPO - Drive Arquivos\\No Jardiim\\Demonstrativos\\Base Relatório\\produtos_atualizados.xlsx'
 
 def configurar_driver():
     edge_options = webdriver.EdgeOptions()
@@ -58,6 +54,37 @@ def realizar_login(driver):
     button_acesso = driver.find_element(By.XPATH, '//button[@type="button"]//span[text()="Acessar"]')
     button_acesso.click()
 
+def remover_anuncios(driver, max_tentativas=3):
+    
+    wait = WebDriverWait(driver, 10)  
+    tentativas = 0
+
+    while tentativas < max_tentativas:
+        fechado = False  
+
+        try:
+            botao_copiar = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'Copiar link para compartilhar!')]")))
+            botao_copiar.click()
+            print("Anúncio fechado (botão copiar)!")
+            fechado = True
+        except Exception as e:
+            print("Nenhum anúncio (botão copiar).", str(e))
+
+        try:
+            botao_fechar = wait.until(EC.element_to_be_clickable((By.XPATH, "//div[@style='padding: 10px; align-self: flex-end; cursor: pointer;']")))
+            botao_fechar.click()
+            print("Anúncio fechado (botão fechar)!")
+            fechado = True
+        except Exception as e:
+            print("Nenhum anúncio (botão fechar).", str(e))
+
+        if not fechado:
+            print("encerrando verificação.")
+            break
+        
+        tentativas += 1
+        time.sleep(2)
+
 def selecionar_relatorio(driver):
 
     wait = WebDriverWait(driver, 20)
@@ -68,9 +95,9 @@ def selecionar_relatorio(driver):
     elemento = wait.until(EC.visibility_of_element_located((By.XPATH, "//*[contains(text(), 'Vendidos')]")))
     elemento.click()
 
-def verificar_fim_de_semana(data):
-    data_obj = datetime.strptime(data, "%d-%m-%Y")
-    print(f"Data fornecida: {data}, Data convertida: {data_obj}")
+def verificar_fim_de_semana(data_atual):
+    data_obj = datetime.strptime(data_atual, "%d-%m-%Y")
+    print(f"Data fornecida: {data_atual}, Data convertida: {data_obj}")
 
     data_anterior = (data_obj - timedelta(days=1)).strftime("%d")
     print(f"Data anterior: {data_anterior}")
@@ -83,14 +110,16 @@ def verificar_fim_de_semana(data):
     else:
         return [data_anterior]
 
-def gerar_relatorio(driver, data):
+def gerar_relatorio(driver, datas):
+        
+        time.sleep(40)
     
         wait = WebDriverWait(driver, 30) 
         elementos = wait.until(EC.presence_of_all_elements_located((By.CLASS_NAME, "sc-jQAyio")))
         elementos[0].click()
 
         dates = wait.until(EC.presence_of_all_elements_located((By.CLASS_NAME, "sc-GvgMv")))
-        date = next((el for el in dates if el.text == data), None)
+        date = next((el for el in dates if el.text == datas), None)
         if date:
             date.click()
 
@@ -101,15 +130,9 @@ def gerar_relatorio(driver, data):
         elementos[1].click()
 
         dates = wait.until(EC.presence_of_all_elements_located((By.CLASS_NAME, "sc-GvgMv")))
-        date = next((el for el in dates if el.text == data), None)
+        date = next((el for el in dates if el.text == datas), None)
         if date:
             date.click()
-
-        wait.until(EC.element_to_be_clickable((By.CLASS_NAME, "sc-jQAyio")))
-        elementos[1].click()
-
-        baixar = wait.until(EC.element_to_be_clickable((By.CLASS_NAME, "sc-fujznN")))
-        baixar.click()
 
         wait.until(EC.element_to_be_clickable((By.CLASS_NAME, "sc-jQAyio")))
         elementos[1].click()
@@ -118,22 +141,31 @@ def gerar_relatorio(driver, data):
         baixar.click()
         time.sleep(10)
 
-def tratar_planilha(planilha, data):
+def tratar_planilha(datas, mes_atual):
 
     global arquivo_saida
+    global planilha
+
+    planilha = fr"C:\Users\sigab\Downloads\Produtos({datas}-{mes_atual}_{datas}-{mes_atual}).xlsx"
 
     df = pd.read_excel(planilha, sheet_name="Relatório Produtos")
 
-    df.insert(0, "Período", data)
+    dia = int(datas)
+
+    data_formatada = datetime(hoje.year, hoje.month, dia)
+
+    df.insert(0, "Período", data_formatada)
     df.insert(1,"Tipo","")
     df.insert(len(df.columns), "PIZZA de Dois Sabores", "")
 
     arquivo_saida = planilha
     df.to_excel(arquivo_saida, index=False, engine='openpyxl')
 
-def concatenar_planilhas(arquivo_saida, caminho):
+def renomear_planilhas(arquivo_saida, caminho):
 
-    global df_concatenado
+    global planilha1
+    global planilha2
+    global ultima_linha_df
 
     planilha1 = pd.read_excel(arquivo_saida)
     planilha2 = pd.read_excel(caminho)
@@ -147,65 +179,49 @@ def concatenar_planilhas(arquivo_saida, caminho):
     ultima_linha_df = planilha2['Período'].last_valid_index() + 2
     print(f"Última linha válida na aba 'produtos': {ultima_linha_df}")
 
+def gerar_arquivo(ultima_linha_df, planilha1, planilha2):
+
     df_concatenado = pd.concat([planilha2.iloc[: ultima_linha_df], planilha1], ignore_index=True)
 
     with pd.ExcelWriter(caminho, engine='openpyxl') as writer:
         df_concatenado.to_excel(writer, index=False, sheet_name="Relatório Produtos")
 
-def gerar_arquivo(df_concatenado):
-
     wb = load_workbook(caminho, data_only=False)
-
     ws = wb["Relatório Produtos"] 
 
-    for row in range(2, len(df_concatenado) + 2):  
-        valor_c = ws[f'C{row}'].value
-        valor_d = ws[f'D{row}'].value
-        
-        if valor_c == ws["N1"].value: 
-            ws[f'B{row}'] = "Normal"
-        elif valor_d and valor_d[:4] == "  - ": 
-            ws[f'B{row}'] = "Complemento"
-        else:
-            ws[f'B{row}'] = "Normal"
+    for i, row in df_concatenado.iterrows():
+        for j, value in enumerate(row):
+            ws.cell(row=i+2, column=j+1, value=value)
 
-
-        data = ws[f'A{row}'].value  
-        if isinstance(data, datetime):  
-            periodo = data.strftime("%B-%Y").lower()  
-            periodo = periodo.replace("january", "janeiro").replace("february", "fevereiro").replace("march", "março") \
-                .replace("april", "abril").replace("may", "maio").replace("june", "junho").replace("july", "julho") \
-                .replace("august", "agosto").replace("september", "setembro").replace("october", "outubro") \
-                .replace("november", "novembro").replace("december", "dezembro")
-            
-            ws[f'A{row}'] = periodo 
-                       
     time.sleep(60)
+
+    for row in range(2, len(df_concatenado) + 2):
+        ws[f'B{row}'] = f'=IF(C{row}=$N$1,"Normal",IF(LEFT(D{row},4)="  - ","Complemento","Normal"))'
+
+    time.sleep(5)
 
     wb.save(caminho)
 
-def deletar_arquivo(planilha, arquivo_saida):
+def deletar_arquivo(planilha):
     if os.path.exists(planilha):
         os.remove(planilha)
         print(f"Arquivo '{planilha}' deletado com sucesso.")
-    elif os.path.exists(arquivo_saida):
-        os.remove(arquivo_saida)
-        print(f"Arquivo '{arquivo_saida}' deletado com sucesso.")
     else:
         print("Nenhum dos arquivos foi encontrado para deletar.")
 
 
 driver = configurar_driver()
 realizar_login(driver)
+remover_anuncios(driver)
 selecionar_relatorio(driver)
-datas_para_processar = verificar_fim_de_semana(data)
+datas_para_processar = verificar_fim_de_semana(data_atual)
 for datas in datas_para_processar:
-    print(f"Iniciando o processamento para a data: {data}")
+    print(f"Iniciando o processamento para a data: {datas}")
     gerar_relatorio(driver, datas)
-    tratar_planilha(planilha, data)
-    concatenar_planilhas(arquivo_saida, caminho)
-    gerar_arquivo(df_concatenado)
-    deletar_arquivo(planilha, arquivo_saida)
+    tratar_planilha(datas, mes_atual)
+    renomear_planilhas(arquivo_saida, caminho)
+    gerar_arquivo(ultima_linha_df, planilha1, planilha2)
+    deletar_arquivo(planilha)
 
 print("Processo concluído.")
 driver.quit()
