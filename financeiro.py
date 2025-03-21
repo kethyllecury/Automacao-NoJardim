@@ -25,7 +25,7 @@ mes_atual_int = datetime.now().month
 
 ano_atual = datetime.now().year
 
-caminho = f'G:\\.shortcut-targets-by-id\\1ySpnxdv_XzDx42T-TJ1JYAs013TNGwLO\\SigaBPO - Drive Arquivos\\No Jardiim\\Demonstrativos\\Base Relatório\\produtos_atualizados.xlsx'
+caminho = r'G:\\.shortcut-targets-by-id\\1ySpnxdv_XzDx42T-TJ1JYAs013TNGwLO\\SigaBPO - Drive Arquivos\\No Jardiim\\Demonstrativos\\Base Relatório\\faturamento_atualizado.xlsx'
 
 def configurar_driver():
     edge_options = webdriver.EdgeOptions()
@@ -92,7 +92,7 @@ def selecionar_relatorio(driver):
     relatorio_link.click()
 
     wait = WebDriverWait(driver, 20)
-    elemento = wait.until(EC.visibility_of_element_located((By.XPATH, "//*[contains(text(), 'Vendidos')]")))
+    elemento = wait.until(EC.visibility_of_element_located((By.ID, "menu-item-1-2")))
     elemento.click()
 
 def verificar_fim_de_semana(data_atual):
@@ -141,28 +141,60 @@ def gerar_relatorio(driver, datas):
         baixar.click()
         time.sleep(10)
 
+def dividir_mesa_data_hora(valor):
+
+    partes = valor.split(' - ')  
+    if len(partes) == 3:
+        return partes  
+    else:
+        return [None, None, None] 
+
 def tratar_planilha(datas, mes_atual):
 
     global arquivo_saida
     global planilha
+    global df
 
-    planilha = fr"C:\Users\sigab\Downloads\Produtos({datas}-{mes_atual}_{datas}-{mes_atual}).xlsx"
+    planilha = fr"C:\Users\sigab\Downloads\Faturamento({datas}-{mes_atual}_{datas}-{mes_atual}).xlsx"
 
     df = pd.read_excel(planilha, sheet_name="Relatório Produtos")
 
-    dia = int(datas)
+    df.insert(0, "Modalidade", "")
+    df.insert(1,"Competencia","")
+    df.insert(2,"Dias","")
+    df.insert(3,"Tipo Pgto","")
+    df.insert(4,"Local","")
+    df.insert(5,"Data","")
+    df.insert(6,"Hora","")
+    df.insert(14,"qtd", 1)
+    df.insert(15,"Pix","" )
+    df.insert(16,"PIX","" )
 
-    data_formatada = datetime(hoje.year, hoje.month, dia)
 
-    df.insert(0, "Período", data_formatada)
-    df.insert(1,"Tipo","")
-    df.insert(len(df.columns), "PIZZA de Dois Sabores", "")
+    valores_desejados = [
+    "Pix", "Crédito", "Débito", "Dinheiro", "Clube", "iFood", "Resgate Clube",
+    "Visa Crédito", "Elo Débito", "MasterCard Crédito", "MasterCard Débito",
+    "Visa Débito", "Elo Crédito", "Pagamento Online iFood"
+    ]
+
+    df.loc[df.iloc[:, 7].isin(valores_desejados), df.columns[3]] = df.iloc[:, 7]
+
+    df.iloc[:, 0] = df.iloc[:, 0].replace('', pd.NA)
+    df.iloc[:, 0] = df.iloc[:, 0].ffill()
+
+    df.iloc[:, 4], df.iloc[:, 5], df.iloc[:, 6] = zip(*df.iloc[:, 7].apply(dividir_mesa_data_hora))
+
+    df = df.drop(df.columns[7], axis=1)
+    df = df.drop(0,axis=0)
+    df = df.dropna(subset=[df.columns[4]])
+    df['Data'] = pd.to_datetime(df['Data'], errors='coerce', dayfirst=True)
+    print(df.head(10))  
 
     arquivo_saida = planilha
     df.to_excel(arquivo_saida, index=False, engine='openpyxl')
 
-def renomear_planilhas(arquivo_saida, caminho):
-
+def localizar_ultima_linha(arquivo_saida, caminho):
+    
     global planilha1
     global planilha2
     global ultima_linha_df
@@ -170,13 +202,10 @@ def renomear_planilhas(arquivo_saida, caminho):
     planilha1 = pd.read_excel(arquivo_saida)
     planilha2 = pd.read_excel(caminho)
 
-    planilha2.rename(columns={'Tipo 1': 'Tipo'}, inplace=True)
-    
-
     print("Colunas da planilha 1:", planilha1.columns)
     print("Colunas da planilha 2:", planilha2.columns)
 
-    ultima_linha_df = planilha2['Período'].last_valid_index() + 2
+    ultima_linha_df = planilha2['Modalidade'].last_valid_index() + 2
     print(f"Última linha válida na aba 'produtos': {ultima_linha_df}")
 
 def gerar_arquivo(ultima_linha_df, planilha1, planilha2):
@@ -184,10 +213,10 @@ def gerar_arquivo(ultima_linha_df, planilha1, planilha2):
     df_concatenado = pd.concat([planilha2.iloc[: ultima_linha_df], planilha1], ignore_index=True)
 
     with pd.ExcelWriter(caminho, engine='openpyxl') as writer:
-        df_concatenado.to_excel(writer, index=False, sheet_name="Relatório Produtos")
+        df_concatenado.to_excel(writer, index=False, sheet_name="Relatório Venda")
 
     wb = load_workbook(caminho, data_only=False)
-    ws = wb["Relatório Produtos"] 
+    ws = wb["Relatório Venda"] 
 
     for i, row in df_concatenado.iterrows():
         for j, value in enumerate(row):
@@ -196,8 +225,11 @@ def gerar_arquivo(ultima_linha_df, planilha1, planilha2):
     time.sleep(60)
 
     for row in range(2, len(df_concatenado) + 2):
-        ws[f'B{row}'] = f'=IF(C{row}=$N$1,"Normal",IF(LEFT(D{row},4)="  - ","Complemento","Normal"))'
-
+        ws[f'A{row}'] = f'=VLOOKUP(D{row}, O:P, 2, 0)'
+        ws[f'B{row}'] = f'=MONTH(F{row})&YEAR(F{row})'
+        ws[f'C{row}'] = f'=IF(F{row}=F{row-1}, 0, 1)' 
+        
+    
     time.sleep(5)
 
     wb.save(caminho)
@@ -218,7 +250,7 @@ for datas in datas_para_processar:
     print(f"Iniciando o processamento para a data: {datas}")
     gerar_relatorio(driver, datas)
     tratar_planilha(datas, mes_atual)
-    renomear_planilhas(arquivo_saida, caminho)
+    localizar_ultima_linha(arquivo_saida, caminho)
     gerar_arquivo(ultima_linha_df, planilha1, planilha2)
     deletar_arquivo(planilha)
 
