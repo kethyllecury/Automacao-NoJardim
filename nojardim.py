@@ -105,7 +105,7 @@ def verificar_fim_de_semana(data_atual):
     if data_obj.weekday() == 0: 
         sexta = (data_obj - timedelta(days=3)).strftime("%d")
         sabado = (data_obj - timedelta(days=2)).strftime("%d")
-        print(f"Segunda-feira detectada, retornando sexta e sábado: {sexta}, {sabado}")
+        print(f"Segunda-feira detectada, retornando sexta e sábado: {sexta}, {sabado}, {data_anterior}")
         return [sexta, sabado, data_anterior]
     else:
         return [data_anterior]
@@ -119,9 +119,9 @@ def gerar_relatorio(driver, datas):
         elementos[0].click()
 
         dates = wait.until(EC.presence_of_all_elements_located((By.CLASS_NAME, "sc-GvgMv")))
-        date = next((el for el in dates if el.text == datas), None)
-        if date:
-            date.click()
+        date_24 = [el for el in dates if el.text == datas]
+        if len(date_24) > 1:
+            date_24[1].click()  
 
         wait.until(EC.element_to_be_clickable((By.CLASS_NAME, "sc-jQAyio")))
         elementos[0].click()
@@ -130,12 +130,18 @@ def gerar_relatorio(driver, datas):
         elementos[1].click()
 
         dates = wait.until(EC.presence_of_all_elements_located((By.CLASS_NAME, "sc-GvgMv")))
-        date = next((el for el in dates if el.text == datas), None)
-        if date:
-            date.click()
+        date_24 = [el for el in dates if el.text == datas]
+        if len(date_24) > 1:
+            date_24[1].click()
 
         wait.until(EC.element_to_be_clickable((By.CLASS_NAME, "sc-jQAyio")))
         elementos[1].click()
+
+        buscar = WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.XPATH, "//button[.//span[text()='Buscar']]")))
+        buscar.click()
+        print("Botão 'Buscar' clicado com sucesso!")
+        
+        time.sleep(10)
 
         baixar = wait.until(EC.element_to_be_clickable((By.CLASS_NAME, "sc-fujznN")))
         baixar.click()

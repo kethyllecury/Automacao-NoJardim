@@ -119,9 +119,9 @@ def gerar_relatorio(driver, datas):
         elementos[0].click()
 
         dates = wait.until(EC.presence_of_all_elements_located((By.CLASS_NAME, "sc-GvgMv")))
-        date = next((el for el in dates if el.text == datas), None)
-        if date:
-            date.click()
+        date_24 = [el for el in dates if el.text == datas]
+        if len(date_24) > 1:
+            date_24[1].click()
 
         wait.until(EC.element_to_be_clickable((By.CLASS_NAME, "sc-jQAyio")))
         elementos[0].click()
@@ -130,9 +130,9 @@ def gerar_relatorio(driver, datas):
         elementos[1].click()
 
         dates = wait.until(EC.presence_of_all_elements_located((By.CLASS_NAME, "sc-GvgMv")))
-        date = next((el for el in dates if el.text == datas), None)
-        if date:
-            date.click()
+        date_24 = [el for el in dates if el.text == datas]
+        if len(date_24) > 1:
+            date_24[1].click()
 
         wait.until(EC.element_to_be_clickable((By.CLASS_NAME, "sc-jQAyio")))
         elementos[1].click()
@@ -181,6 +181,8 @@ def tratar_planilha(datas, mes_atual):
 
     df.iloc[:, 0] = df.iloc[:, 0].replace('', pd.NA)
     df.iloc[:, 0] = df.iloc[:, 0].ffill()
+
+    df.iloc[:, 4] = df.iloc[:, 4].replace('Balcão -1', 'Balcão 1')
 
     df.iloc[:, 4], df.iloc[:, 5], df.iloc[:, 6] = zip(*df.iloc[:, 7].apply(dividir_mesa_data_hora))
 
