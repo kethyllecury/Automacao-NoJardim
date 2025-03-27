@@ -179,8 +179,8 @@ def tratar_planilha(datas, mes_atual):
 
     df.loc[df.iloc[:, 7].isin(valores_desejados), df.columns[3]] = df.iloc[:, 7]
 
-    df.iloc[:, 0] = df.iloc[:, 0].replace('', pd.NA)
-    df.iloc[:, 0] = df.iloc[:, 0].ffill()
+    df.iloc[:, 3] = df.iloc[:, 3].replace('', pd.NA)
+    df.iloc[:, 3] = df.iloc[:, 3].ffill()
 
     df.iloc[:, 4] = df.iloc[:, 4].replace('Balcão -1', 'Balcão 1')
 
@@ -190,6 +190,7 @@ def tratar_planilha(datas, mes_atual):
     df = df.drop(0,axis=0)
     df = df.dropna(subset=[df.columns[4]])
     df['Data'] = pd.to_datetime(df['Data'], errors='coerce', dayfirst=True)
+
     print(df.head(10))  
 
     arquivo_saida = planilha
