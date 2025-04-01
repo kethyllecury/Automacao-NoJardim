@@ -17,11 +17,16 @@ email = os.getenv("emailtakeat")
 password = os.getenv("senhatakeat")
 
 hoje = datetime.today()
+
 data_atual = hoje.strftime("%d-%m-%Y")
 data = datetime.now()
 
 mes_atual = f"{data.month:02}"
 mes_atual_int = datetime.now().month
+
+mes_anterior = (hoje.replace(day=1) - timedelta(days=1)).strftime("%m")
+mes_anterior_formatado = mes_anterior.zfill(2)
+print(mes_anterior_formatado)
 
 ano_atual = datetime.now().year
 
@@ -105,7 +110,7 @@ def verificar_fim_de_semana(data_atual):
     if data_obj.weekday() == 0: 
         sexta = (data_obj - timedelta(days=3)).strftime("%d")
         sabado = (data_obj - timedelta(days=2)).strftime("%d")
-        print(f"Segunda-feira detectada, retornando sexta e sábado: {sexta}, {sabado}")
+        print(f"Segunda-feira detectada, retornando sexta e sábado: {sexta}, {sabado}, {data_anterior}")
         return [sexta, sabado, data_anterior]
     else:
         return [data_anterior]
@@ -122,6 +127,8 @@ def gerar_relatorio(driver, datas):
         date_24 = [el for el in dates if el.text == datas]
         if len(date_24) > 1:
             date_24[1].click()
+        elif len(date_24) == 1:
+            date_24[0].click()
 
         wait.until(EC.element_to_be_clickable((By.CLASS_NAME, "sc-jQAyio")))
         elementos[0].click()
@@ -133,9 +140,13 @@ def gerar_relatorio(driver, datas):
         date_24 = [el for el in dates if el.text == datas]
         if len(date_24) > 1:
             date_24[1].click()
+        elif len(date_24) == 1:
+            date_24[0].click()
 
         wait.until(EC.element_to_be_clickable((By.CLASS_NAME, "sc-jQAyio")))
         elementos[1].click()
+
+        time.sleep(10)
 
         baixar = wait.until(EC.element_to_be_clickable((By.CLASS_NAME, "sc-fujznN")))
         baixar.click()
@@ -149,13 +160,16 @@ def dividir_mesa_data_hora(valor):
     else:
         return [None, None, None] 
 
-def tratar_planilha(datas, mes_atual):
+def tratar_planilha(datas, mes_atual, mes_anterior_formatado):
 
     global arquivo_saida
     global planilha
     global df
 
-    planilha = fr"C:\Users\sigab\Downloads\Faturamento({datas}-{mes_atual}_{datas}-{mes_atual}).xlsx"
+    if hoje.day == 1:
+        planilha = fr"C:\Users\sigab\Downloads\Faturamento({datas}-{mes_anterior_formatado}_{datas}-{mes_anterior_formatado}).xlsx"
+    else:
+        planilha = fr"C:\Users\sigab\Downloads\Faturamento({datas}-{mes_atual}_{datas}-{mes_atual}).xlsx"
 
     df = pd.read_excel(planilha, sheet_name="Relatório Produtos")
 
@@ -174,7 +188,7 @@ def tratar_planilha(datas, mes_atual):
     valores_desejados = [
     "Pix", "Crédito", "Débito", "Dinheiro", "Clube", "iFood", "Resgate Clube",
     "Visa Crédito", "Elo Débito", "MasterCard Crédito", "MasterCard Débito",
-    "Visa Débito", "Elo Crédito", "Pagamento Online iFood"
+    "Visa Débito", "Elo Crédito", "Pagamento Online iFood", "Cashback Takeat"
     ]
 
     df.loc[df.iloc[:, 7].isin(valores_desejados), df.columns[3]] = df.iloc[:, 7]
@@ -208,8 +222,13 @@ def localizar_ultima_linha(arquivo_saida, caminho):
     print("Colunas da planilha 1:", planilha1.columns)
     print("Colunas da planilha 2:", planilha2.columns)
 
-    ultima_linha_df = planilha2['Modalidade'].last_valid_index() + 2
+    ultima_linha_index = planilha2['Modalidade'].last_valid_index()
+    if ultima_linha_index is not None:
+        ultima_linha_df = ultima_linha_index + 2
+
     print(f"Última linha válida na aba 'produtos': {ultima_linha_df}")
+    print(planilha2.head())  
+    time.sleep(15)
 
 def gerar_arquivo(ultima_linha_df, planilha1, planilha2):
 
@@ -252,7 +271,7 @@ datas_para_processar = verificar_fim_de_semana(data_atual)
 for datas in datas_para_processar:
     print(f"Iniciando o processamento para a data: {datas}")
     gerar_relatorio(driver, datas)
-    tratar_planilha(datas, mes_atual)
+    tratar_planilha(datas, mes_atual, mes_anterior_formatado)
     localizar_ultima_linha(arquivo_saida, caminho)
     gerar_arquivo(ultima_linha_df, planilha1, planilha2)
     deletar_arquivo(planilha)

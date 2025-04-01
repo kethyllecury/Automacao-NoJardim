@@ -23,6 +23,10 @@ data = datetime.now()
 mes_atual = f"{data.month:02}"
 mes_atual_int = datetime.now().month
 
+mes_anterior = (data.replace(day=1) - timedelta(days=1)).month
+mes_anterior_novo = int(f"{mes_anterior:02}")
+mes_anterior_formatado = f"{mes_anterior:02}"
+
 ano_atual = datetime.now().year
 
 caminho = f'G:\\.shortcut-targets-by-id\\1ySpnxdv_XzDx42T-TJ1JYAs013TNGwLO\\SigaBPO - Drive Arquivos\\No Jardiim\\Demonstrativos\\Base Relatório\\produtos_atualizados.xlsx'
@@ -105,7 +109,7 @@ def verificar_fim_de_semana(data_atual):
     if data_obj.weekday() == 0: 
         sexta = (data_obj - timedelta(days=3)).strftime("%d")
         sabado = (data_obj - timedelta(days=2)).strftime("%d")
-        print(f"Segunda-feira detectada, retornando sexta e sábado: {sexta}, {sabado}, {data_anterior}")
+        print(f"Segunda-feira detectada, retornando sexta e sábado: {sexta}, {sabado}")
         return [sexta, sabado, data_anterior]
     else:
         return [data_anterior]
@@ -113,8 +117,9 @@ def verificar_fim_de_semana(data_atual):
 def gerar_relatorio(driver, datas):
         
         time.sleep(40)
+        print(datas)
     
-        wait = WebDriverWait(driver, 30) 
+        wait = WebDriverWait(driver, 60) 
         elementos = wait.until(EC.presence_of_all_elements_located((By.CLASS_NAME, "sc-jQAyio")))
         elementos[0].click()
 
@@ -122,6 +127,8 @@ def gerar_relatorio(driver, datas):
         date_24 = [el for el in dates if el.text == datas]
         if len(date_24) > 1:
             date_24[1].click()  
+        elif len(date_24) == 1:
+            date_24[0].click()
 
         wait.until(EC.element_to_be_clickable((By.CLASS_NAME, "sc-jQAyio")))
         elementos[0].click()
@@ -133,6 +140,8 @@ def gerar_relatorio(driver, datas):
         date_24 = [el for el in dates if el.text == datas]
         if len(date_24) > 1:
             date_24[1].click()
+        elif len(date_24) == 1:
+            date_24[0].click()
 
         wait.until(EC.element_to_be_clickable((By.CLASS_NAME, "sc-jQAyio")))
         elementos[1].click()
@@ -147,18 +156,22 @@ def gerar_relatorio(driver, datas):
         baixar.click()
         time.sleep(10)
 
-def tratar_planilha(datas, mes_atual):
+def tratar_planilha(datas, mes_atual, mes_anterior_novo):
 
     global arquivo_saida
     global planilha
 
-    planilha = fr"C:\Users\sigab\Downloads\Produtos({datas}-{mes_atual}_{datas}-{mes_atual}).xlsx"
-
-    df = pd.read_excel(planilha, sheet_name="Relatório Produtos")
-
     dia = int(datas)
 
-    data_formatada = datetime(hoje.year, hoje.month, dia)
+    if hoje.day == 1:
+        planilha = fr"C:\Users\sigab\Downloads\Produtos({datas}-{mes_anterior_formatado}_{datas}-{mes_anterior_formatado}).xlsx"
+        data_formatada = datetime(hoje.year, mes_anterior_novo, dia)
+        print(mes_anterior_novo)
+    else:
+        planilha = fr"C:\Users\sigab\Downloads\Produtos({datas}-{mes_atual}_{datas}-{mes_atual}).xlsx"
+        data_formatada = datetime(hoje.year, hoje.month, dia)
+
+    df = pd.read_excel(planilha, sheet_name="Relatório Produtos")
 
     df.insert(0, "Período", data_formatada)
     df.insert(1,"Tipo","")
@@ -223,7 +236,7 @@ datas_para_processar = verificar_fim_de_semana(data_atual)
 for datas in datas_para_processar:
     print(f"Iniciando o processamento para a data: {datas}")
     gerar_relatorio(driver, datas)
-    tratar_planilha(datas, mes_atual)
+    tratar_planilha(datas, mes_atual, mes_anterior_novo)
     renomear_planilhas(arquivo_saida, caminho)
     gerar_arquivo(ultima_linha_df, planilha1, planilha2)
     deletar_arquivo(planilha)
